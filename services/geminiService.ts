@@ -108,4 +108,4 @@ export const generateIncidentReport = async (nodeLabel: string, type: string) =>
     } catch (e) {
         return "Failed to generate report.";
     }
-}
+};
