@@ -1,9 +1,8 @@
-
 import React, { useRef, useEffect, useState } from 'react';
-import { TrafficData, Node, Link } from '../types';
+import { TrafficData, Node } from '../types';
 
 interface TrafficMapProps {
-  data: TrafficData;
+  data: TrafficData | null;
   onNodeSelect: (node: Node) => void;
   selectedNodeId?: string;
 }
@@ -41,7 +40,7 @@ const TrafficMap: React.FC<TrafficMapProps> = ({ data, onNodeSelect, selectedNod
         // Find existing particles for this link
         const existingForLink = currentParticles.filter(p => p.linkId === linkId);
         
-        // Keep existing ones (move them to new array)
+        // Keep existing ones
         let keptCount = 0;
         existingForLink.forEach(p => {
              if (keptCount < targetCount) {
@@ -79,13 +78,13 @@ const TrafficMap: React.FC<TrafficMapProps> = ({ data, onNodeSelect, selectedNod
     if (!ctx) return;
 
     const render = () => {
-      // Resize handling
+      // Handle resizing without clearing if size hasn't changed
       if (canvas.width !== container.clientWidth || canvas.height !== container.clientHeight) {
         canvas.width = container.clientWidth;
         canvas.height = container.clientHeight;
       }
 
-      // Clear
+      // Clear Canvas
       ctx.fillStyle = '#020617';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -104,13 +103,16 @@ const TrafficMap: React.FC<TrafficMapProps> = ({ data, onNodeSelect, selectedNod
       const offsetX = -transform.x / transform.k;
       const offsetY = -transform.y / transform.k;
       
-      for (let x = Math.floor(offsetX / gridSize) * gridSize; x < offsetX + rangeX; x += gridSize) {
-        ctx.moveTo(x, offsetY);
-        ctx.lineTo(x, offsetY + rangeY);
+      const startX = Math.floor(offsetX / gridSize) * gridSize;
+      const startY = Math.floor(offsetY / gridSize) * gridSize;
+
+      for (let x = startX; x < offsetX + rangeX + gridSize; x += gridSize) {
+        ctx.moveTo(x, startY);
+        ctx.lineTo(x, startY + rangeY + gridSize);
       }
-      for (let y = Math.floor(offsetY / gridSize) * gridSize; y < offsetY + rangeY; y += gridSize) {
-        ctx.moveTo(offsetX, y);
-        ctx.lineTo(offsetX + rangeX, y);
+      for (let y = startY; y < offsetY + rangeY + gridSize; y += gridSize) {
+        ctx.moveTo(startX, y);
+        ctx.lineTo(startX + rangeX + gridSize, y);
       }
       ctx.stroke();
 
@@ -138,7 +140,7 @@ const TrafficMap: React.FC<TrafficMapProps> = ({ data, onNodeSelect, selectedNod
 
         ctx.fillStyle = p.color || '#00f3ff';
         ctx.beginPath();
-        ctx.arc(x, y, 2, 0, Math.PI * 2);
+        ctx.arc(x, y, 2 / transform.k + 1, 0, Math.PI * 2);
         ctx.fill();
       });
 
@@ -146,7 +148,7 @@ const TrafficMap: React.FC<TrafficMapProps> = ({ data, onNodeSelect, selectedNod
       data.nodes.forEach(node => {
         const isSelected = selectedNodeId === node.id;
         
-        // Glow
+        // Critical Glow
         if (node.status === 'critical' || isSelected) {
           ctx.beginPath();
           ctx.arc(node.x, node.y, 25, 0, Math.PI * 2);
@@ -167,7 +169,7 @@ const TrafficMap: React.FC<TrafficMapProps> = ({ data, onNodeSelect, selectedNod
 
         // Label
         ctx.fillStyle = isSelected ? '#00f3ff' : '#94a3b8';
-        ctx.font = '10px "JetBrains Mono"';
+        ctx.font = `bold 10px "JetBrains Mono"`;
         ctx.textAlign = 'center';
         ctx.fillText(node.label, node.x, node.y + 20);
 
@@ -188,7 +190,7 @@ const TrafficMap: React.FC<TrafficMapProps> = ({ data, onNodeSelect, selectedNod
     return () => cancelAnimationFrame(requestRef.current);
   }, [data, transform, selectedNodeId]);
 
-  // Better Zoom Handler
+  // Zoom Handler
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
     if (!canvasRef.current) return;
@@ -212,7 +214,6 @@ const TrafficMap: React.FC<TrafficMapProps> = ({ data, onNodeSelect, selectedNod
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    // Check for node click
     if (!canvasRef.current || !data) return;
     const rect = canvasRef.current.getBoundingClientRect();
     const x = (e.clientX - rect.left - transform.x) / transform.k;

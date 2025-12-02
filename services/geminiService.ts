@@ -1,6 +1,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { TrafficData, OptimizationSuggestion } from '../types';
 
+// Safely retrieve API key with fallback to empty string to prevent build errors
 const apiKey = process.env.API_KEY || '';
 const ai = new GoogleGenAI({ apiKey });
 
@@ -8,6 +9,10 @@ const modelId = 'gemini-2.5-flash';
 
 export const analyzeTraffic = async (data: TrafficData, scenario: string): Promise<string> => {
   try {
+    if (!apiKey) {
+      return "System Error: API_KEY not found in environment.";
+    }
+
     const prompt = `
       Analyze the following Indian traffic system data snapshot.
       Scenario Context: ${scenario}
@@ -42,6 +47,8 @@ export const analyzeTraffic = async (data: TrafficData, scenario: string): Promi
 
 export const optimizeSignalTiming = async (data: TrafficData): Promise<OptimizationSuggestion[]> => {
   try {
+    if (!apiKey) return [];
+
     const criticalNodes = data.nodes.filter(n => n.congestionLevel > 50);
     
     if (criticalNodes.length === 0) return [];
@@ -92,6 +99,7 @@ export const optimizeSignalTiming = async (data: TrafficData): Promise<Optimizat
 
 export const generateIncidentReport = async (nodeLabel: string, type: string) => {
     try {
+        if (!apiKey) return "API Key missing.";
         const response = await ai.models.generateContent({
             model: modelId,
             contents: `Generate a formalized incident report for "${type}" at "${nodeLabel}" in India. Mention potential impact on commuters and suggest alternate routes.`,
