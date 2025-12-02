@@ -1,20 +1,38 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# TrafficNet India AI
 
-# Run and deploy your AI Studio app
+## Overview
+TrafficNet is a next-generation traffic management dashboard designed for Indian smart cities. It features real-time congestion tracking, AI-powered signal optimization, and computer vision integration.
 
-This contains everything you need to run your app locally.
+## Architecture
+- **Frontend**: React, Tailwind CSS, Recharts, Lucide Icons
+- **Backend**: Node.js, Express (app.js)
+- **AI**: Gemini API 2.5 Flash
+- **Persistence**: LocalStorage (fallback) + In-Memory Server Logs
 
-View your app in AI Studio: https://ai.studio/apps/drive/1l7WnoujXa0_2xkoHf0Ql2-vDV83povT7
+## How to Run
 
-## Run Locally
+### 1. Start the Backend Server
+The backend handles system logging and health checks.
+```bash
+npm install
+node app.js
+```
+*Server will start on port 3001*
 
-**Prerequisites:**  Node.js
+### 2. Start the Frontend
+In a separate terminal:
+```bash
+npm start
+```
+*Application will launch at http://localhost:3000*
 
+## Features
+- **Live Traffic Map**: HTML5 Canvas particle simulation.
+- **AI Operations**: Gemini-powered traffic analysis and signal timing.
+- **Vahan Database**: Mock vehicle registry with persistent CRUD.
+- **Incident Console**: Manage accidents and VIP movements.
+- **CCTV Feed**: Simulated ML detection overlay.
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## Auth Credentials
+- **User**: admin / india2025
+- **User**: user / user

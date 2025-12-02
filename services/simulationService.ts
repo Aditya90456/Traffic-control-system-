@@ -44,7 +44,7 @@ const generateInitialLinks = (nodes: Node[]): Link[] => {
       links.push({
         source: node.id,
         target: `n-${r}-${c + 1}`,
-        flowRate: Math.floor(Math.random() * 20) + 5,
+        flowRate: 10,
         distance: 1
       });
     }
@@ -53,7 +53,7 @@ const generateInitialLinks = (nodes: Node[]): Link[] => {
       links.push({
         source: node.id,
         target: `n-${r + 1}-${c}`,
-        flowRate: Math.floor(Math.random() * 20) + 5,
+        flowRate: 10,
         distance: 1
       });
     }
@@ -112,6 +112,28 @@ export const getSimulationState = (scenario: SimScenario): TrafficData => {
       status,
       policeDispatched: policeState
     };
+  });
+
+  // Update Links based on Node Congestion (Traffic slows down coming OUT of congested nodes)
+  links = links.map(link => {
+      const sourceNode = nodes.find(n => n.id === link.source);
+      const targetNode = nodes.find(n => n.id === link.target);
+      
+      let newFlow = link.flowRate;
+
+      if (sourceNode && targetNode) {
+          // If target is congested, flow reduces (bottleneck)
+          const bottleneckFactor = (100 - targetNode.congestionLevel) / 100;
+          // Base flow varies slightly
+          const baseFlow = (Math.random() * 10) + 5; 
+          
+          newFlow = baseFlow * bottleneckFactor * multiplier;
+          
+          // Clamp flow
+          newFlow = Math.max(1, Math.min(30, newFlow));
+      }
+
+      return { ...link, flowRate: newFlow };
   });
 
   const healthSum = nodes.reduce((acc, n) => acc + (100 - n.congestionLevel), 0);

@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState } from 'react';
 import { TrafficData, Node, Link } from '../types';
 
@@ -20,32 +21,53 @@ const TrafficMap: React.FC<TrafficMapProps> = ({ data, onNodeSelect, selectedNod
   const requestRef = useRef<number>(0);
   const particlesRef = useRef<any[]>([]);
 
-  // Initialize Particles - Only when links array reference changes (not every data update)
+  // Update Particles based on Data
   useEffect(() => {
-    if (data && data.links) {
-      // Only re-initialize if particles are empty or links drastically changed
-      if (particlesRef.current.length === 0) {
-          const newParticles: any[] = [];
-          data.links.forEach(link => {
-            const source = data.nodes.find(n => n.id === link.source);
-            const target = data.nodes.find(n => n.id === link.target);
-            if (source && target) {
-              // Create particles based on flow rate
-              const count = Math.min(5, Math.ceil(link.flowRate / 5));
-              for (let i = 0; i < count; i++) {
-                newParticles.push({
-                  source,
-                  target,
-                  progress: Math.random(),
-                  speed: 0.002 + Math.random() * 0.003
-                });
-              }
-            }
-          });
-          particlesRef.current = newParticles;
+    if (!data || !data.links) return;
+
+    const currentParticles = particlesRef.current;
+    const newParticles: any[] = [];
+
+    data.links.forEach(link => {
+      const source = data.nodes.find(n => n.id === link.source);
+      const target = data.nodes.find(n => n.id === link.target);
+      
+      if (source && target) {
+        const linkId = `${link.source}-${link.target}`;
+        
+        // Target number of particles - Increased density for Indian traffic context
+        const targetCount = Math.floor(link.flowRate) + 2;
+        
+        // Find existing particles for this link
+        const existingForLink = currentParticles.filter(p => p.linkId === linkId);
+        
+        // Keep existing ones (move them to new array)
+        let keptCount = 0;
+        existingForLink.forEach(p => {
+             if (keptCount < targetCount) {
+                 newParticles.push(p);
+                 keptCount++;
+             }
+        });
+
+        // Add new ones if needed
+        while (keptCount < targetCount) {
+            newParticles.push({
+                linkId,
+                source,
+                target,
+                progress: Math.random(), // Spread them out
+                speed: 0.002 + Math.random() * 0.004, // Variable speed
+                color: Math.random() > 0.8 ? '#fbbf24' : Math.random() > 0.9 ? '#ef4444' : '#00f3ff' // Mixed traffic colors
+            });
+            keptCount++;
+        }
       }
-    }
-  }, [data.links]);
+    });
+
+    particlesRef.current = newParticles;
+
+  }, [data]);
 
   // Main Render Loop
   useEffect(() => {
@@ -114,7 +136,7 @@ const TrafficMap: React.FC<TrafficMapProps> = ({ data, onNodeSelect, selectedNod
         const x = p.source.x + (p.target.x - p.source.x) * p.progress;
         const y = p.source.y + (p.target.y - p.source.y) * p.progress;
 
-        ctx.fillStyle = '#00f3ff';
+        ctx.fillStyle = p.color || '#00f3ff';
         ctx.beginPath();
         ctx.arc(x, y, 2, 0, Math.PI * 2);
         ctx.fill();

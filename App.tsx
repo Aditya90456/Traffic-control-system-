@@ -7,12 +7,12 @@ import NodeDetails from './components/NodeDetails';
 import DatabaseView from './components/DatabaseView';
 import IncidentsView from './components/IncidentsView';
 import LoginScreen from './components/LoginScreen';
-import TrafficMap from './components/TrafficMap'; // Import Restored
+import TrafficMap from './components/TrafficMap';
 import { TrafficData, SimScenario, OptimizationSuggestion, Node, User } from './types';
 import { getSimulationState, dispatchPoliceToNode } from './services/simulationService';
 import { analyzeTraffic, optimizeSignalTiming } from './services/geminiService';
 import { logAction, resetDatabase } from './services/storageService';
-import { LayoutDashboard, BarChart3, Cpu, Search, Radio, Database, LogOut, AlertCircle, RefreshCw } from 'lucide-react';
+import { LayoutDashboard, BarChart3, Cpu, Search, Radio, Database, LogOut, AlertCircle, RefreshCw, Wifi, WifiOff } from 'lucide-react';
 import { GoogleGenAI } from "@google/genai";
 
 const App: React.FC = () => {
@@ -26,6 +26,9 @@ const App: React.FC = () => {
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<OptimizationSuggestion[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  
+  // System State
+  const [serverStatus, setServerStatus] = useState<'ONLINE' | 'OFFLINE'>('OFFLINE');
   
   // Selection & Search
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
@@ -41,6 +44,22 @@ const App: React.FC = () => {
     if (savedUser) {
         setUser(JSON.parse(savedUser));
     }
+  }, []);
+
+  // Check Server Health
+  useEffect(() => {
+    const checkServer = async () => {
+        try {
+            const res = await fetch('http://localhost:3001/api/health');
+            if (res.ok) setServerStatus('ONLINE');
+            else setServerStatus('OFFLINE');
+        } catch (e) {
+            setServerStatus('OFFLINE');
+        }
+    };
+    checkServer();
+    const interval = setInterval(checkServer, 30000); // Check every 30s
+    return () => clearInterval(interval);
   }, []);
 
   const handleLogin = (userData: User) => {
@@ -179,7 +198,7 @@ const App: React.FC = () => {
     <div className="flex h-screen bg-[#020617] text-slate-200 font-sans overflow-hidden scanlines">
       
       {/* Sidebar Navigation */}
-      <div className="w-20 flex flex-col items-center py-6 border-r border-slate-800 bg-[#050b14] z-30 shadow-2xl">
+      <div className="w-20 flex flex-col items-center py-6 border-r border-slate-800 bg-[#050b14] z-30 shadow-2xl relative">
         <div className="mb-8 p-3 bg-indigo-600/20 rounded-xl border border-indigo-500/50 shadow-[0_0_15px_rgba(79,70,229,0.4)]">
           <Cpu size={28} className="text-indigo-400" />
         </div>
@@ -216,6 +235,19 @@ const App: React.FC = () => {
             
             <div className="mt-auto flex flex-col gap-4 w-full">
                 <div className="h-px bg-slate-800 w-full"></div>
+                
+                {/* Server Status Indicator */}
+                <div className="flex flex-col items-center gap-1 mb-2" title={`Backend Server: ${serverStatus}`}>
+                    {serverStatus === 'ONLINE' ? (
+                        <Wifi size={16} className="text-emerald-500" />
+                    ) : (
+                        <WifiOff size={16} className="text-slate-600" />
+                    )}
+                    <span className={`text-[8px] font-bold ${serverStatus === 'ONLINE' ? 'text-emerald-500' : 'text-slate-600'}`}>
+                        {serverStatus === 'ONLINE' ? 'LINKED' : 'LOCAL'}
+                    </span>
+                </div>
+
                 <button 
                     onClick={handleSystemReset}
                     className="p-3 rounded-xl text-slate-500 hover:bg-red-900/20 hover:text-red-400 transition-colors"
