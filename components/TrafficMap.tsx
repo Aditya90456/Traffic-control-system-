@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState } from 'react';
 import { TrafficData, Node, Link } from '../types';
 
@@ -21,29 +20,32 @@ const TrafficMap: React.FC<TrafficMapProps> = ({ data, onNodeSelect, selectedNod
   const requestRef = useRef<number>(0);
   const particlesRef = useRef<any[]>([]);
 
-  // Initialize Particles
+  // Initialize Particles - Only when links array reference changes (not every data update)
   useEffect(() => {
     if (data && data.links) {
-      const newParticles: any[] = [];
-      data.links.forEach(link => {
-        const source = data.nodes.find(n => n.id === link.source);
-        const target = data.nodes.find(n => n.id === link.target);
-        if (source && target) {
-          // Create particles based on flow rate
-          const count = Math.min(5, Math.ceil(link.flowRate / 5));
-          for (let i = 0; i < count; i++) {
-            newParticles.push({
-              source,
-              target,
-              progress: Math.random(),
-              speed: 0.002 + Math.random() * 0.003
-            });
-          }
-        }
-      });
-      particlesRef.current = newParticles;
+      // Only re-initialize if particles are empty or links drastically changed
+      if (particlesRef.current.length === 0) {
+          const newParticles: any[] = [];
+          data.links.forEach(link => {
+            const source = data.nodes.find(n => n.id === link.source);
+            const target = data.nodes.find(n => n.id === link.target);
+            if (source && target) {
+              // Create particles based on flow rate
+              const count = Math.min(5, Math.ceil(link.flowRate / 5));
+              for (let i = 0; i < count; i++) {
+                newParticles.push({
+                  source,
+                  target,
+                  progress: Math.random(),
+                  speed: 0.002 + Math.random() * 0.003
+                });
+              }
+            }
+          });
+          particlesRef.current = newParticles;
+      }
     }
-  }, [data]);
+  }, [data.links]);
 
   // Main Render Loop
   useEffect(() => {
@@ -164,16 +166,27 @@ const TrafficMap: React.FC<TrafficMapProps> = ({ data, onNodeSelect, selectedNod
     return () => cancelAnimationFrame(requestRef.current);
   }, [data, transform, selectedNodeId]);
 
-  // Event Handlers
+  // Better Zoom Handler
   const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    if (!canvasRef.current) return;
+
+    const rect = canvasRef.current.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
     const scaleFactor = 1.1;
     const direction = e.deltaY > 0 ? 1 / scaleFactor : scaleFactor;
     
-    // Zoom towards mouse pointer logic could go here, simplified for center zoom or current position
-    setTransform(prev => ({
-      ...prev,
-      k: Math.min(Math.max(prev.k * direction, 0.5), 5)
-    }));
+    setTransform(prev => {
+      const newK = Math.min(Math.max(prev.k * direction, 0.5), 5);
+      
+      // Calculate new position to keep mouse pointer stable
+      const newX = mouseX - (mouseX - prev.x) * (newK / prev.k);
+      const newY = mouseY - (mouseY - prev.y) * (newK / prev.k);
+
+      return { x: newX, y: newY, k: newK };
+    });
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
